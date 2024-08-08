@@ -1,0 +1,4 @@
+flask
+requests
+azure.identity
+tabulate
