@@ -93,7 +93,8 @@ def query_log_analytics():
     # Prepare the query payload
     query = """NSPAccessLogs
                     | project TimeGenerated, Category, MatchedRule, SourceIpAddress
-                    | distinct Category, SourceIpAddress"""
+                    | distinct Category, SourceIpAddress
+                    | limit 10"""
     headers = {
         'Authorization': f'Bearer {access_token}',
         'Content-Type': 'application/json'
@@ -116,3 +117,5 @@ def query_log_analytics():
 if __name__ == "__main__":
     #threading.Timer(0, periodic_refresh_service_tags_cache).start()
     app.run(debug=True)
+
+    
