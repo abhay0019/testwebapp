@@ -12,11 +12,11 @@ workspace_id = "subscriptions/3846cb0f-4afa-47ee-8ea4-1c8449c8c8d9/resourcegroup
 uri_discovery = "https://management.azure.com/subscriptions/3846cb0f-4afa-47ee-8ea4-1c8449c8c8d9/providers/Microsoft.Network/locations/ukwest/serviceTagDetails?api-version=2021-03-01"
 service_tags_map = {}
 
-def get_service_tags(uri_discovery):
-    credential = DefaultAzureCredential()
-    token = credential.get_token("https://management.azure.com/.default")
+def get_service_tags(uri_discovery, token):
+    #credential = DefaultAzureCredential()
+    #token = credential.get_token("https://management.azure.com/.default")
     headers = {
-        'Authorization': f'Bearer {token.token}'
+        'Authorization': f'Bearer {token}'
     }
     response = requests.get(uri_discovery, headers=headers)
     response.raise_for_status()
@@ -53,8 +53,8 @@ def periodic_refresh_service_tags_cache():
     # Schedule the next call
     threading.Timer(60, periodic_refresh_service_tags_cache).start()  # Call every 60 seconds
 
-def refresh_service_tags_cache():
-    service_tags = get_service_tags(uri_discovery)
+def refresh_service_tags_cache(token):
+    service_tags = get_service_tags(uri_discovery, token)
     values = service_tags['value']
 
     for value in values:
@@ -80,14 +80,16 @@ def process_la_result(json_result):
 @app.route('/query_log_analytics', methods=['POST'])
 def query_log_analytics():
     # Extract the authorization token from headers
-    access_token = request.headers.get('Authorization')
-    
-    if not access_token or not access_token.startswith('Bearer '):
+    access_token = request.headers.get('Authorization-la')
+    discovery_access_token = request.headers.get('Authorization-discovery') 
+
+    if not access_token or not access_token.startswith('Bearer ') or not discovery_access_token or not discovery_access_token.startswith('Bearer '):
         return jsonify({'error': 'Authorization token is missing or invalid'}), 401
 
     access_token = access_token[len('Bearer '):]  # Remove 'Bearer ' prefix
+    discovery_access_token = discovery_access_token[len('Bearer '):]
     request_data = request.json
-    
+    refresh_service_tags_cache(discovery_access_token)
     # Prepare the query payload
     query = """NSPAccessLogs
                     | project TimeGenerated, Category, MatchedRule, SourceIpAddress
@@ -112,7 +114,5 @@ def query_log_analytics():
 
 # Main script
 if __name__ == "__main__":
-    threading.Timer(0, periodic_refresh_service_tags_cache).start()
+    #threading.Timer(0, periodic_refresh_service_tags_cache).start()
     app.run(debug=True)
-
-    
