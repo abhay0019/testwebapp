@@ -11,9 +11,8 @@ import logging
 app = Flask(__name__)
 
 # Acquire the logger for a library (azure.mgmt.resource in this example)
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
 
 # Replace these values with your own
 workspace_id = "subscriptions/3846cb0f-4afa-47ee-8ea4-1c8449c8c8d9/resourcegroups/functionapptostorageflow/providers/microsoft.operationalinsights/workspaces/nsplog"
@@ -63,7 +62,7 @@ def periodic_refresh_service_tags_cache_nmagent_api():
 
 def refresh_service_tags_cache_nmagent_api():
 # VM credentials
-    hostname = '10.0.1.4' #Public IP of VM: 20.228.36.129
+    hostname = '10.0.1.4' #Public IP of VM: 20.25.197.116
     port = 22
     username = 'testAdmin'
     passw = 'testPassword@1'
@@ -89,7 +88,7 @@ def refresh_service_tags_cache_nmagent_api():
         # Handle the case where `stdout_output` is not valid JSON
         logger.debug(f"Error decoding JSON: {e}")
         # Optionally print the raw output for debugging
-        logger.debug("Raw output:", stdout_output)
+        logger.debug(f"Raw output: {stdout_output}")
         return
     
     version = service_tags_json['version']
@@ -99,7 +98,7 @@ def refresh_service_tags_cache_nmagent_api():
         service_tags_map[systemTag['name']] = systemTag['ipV4']
         service_tags_map[systemTag['name']].extend(systemTag['ipV6'])
 
-    logger.debug("Metering File Version: ", version, "Total in discovery:", len(systemTags), "Total in dict:", len(service_tags_map))
+    logger.debug(f"Metering File Version: {version}. Total in discovery: {len(systemTags)}. Total in dict: {len(service_tags_map)}.")
 
 def periodic_refresh_service_tags_cache_discovery_api():
     # Your task logic here
@@ -115,7 +114,7 @@ def refresh_service_tags_cache_discovery_api():
 
     for value in values:
         service_tags_map[value['name']] = value['properties']['addressPrefixes']
-    logger.debug("Total in discovery:", len(values), "Total in dict:", len(service_tags_map))
+    logger.debug(f"Total in discovery: {len(values)}. Total in dict: {len(service_tags_map)}.")
 
 def process_la_result(json_result):    
     # Extract column names and rows from the JSON data
