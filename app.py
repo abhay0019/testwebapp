@@ -61,7 +61,7 @@ def periodic_refresh_service_tags_cache_nmagent_api():
 
 def refresh_service_tags_cache_nmagent_api():
 # VM credentials
-    hostname = '10.0.1.4' #Public IP of VM: 20.25.197.116
+    hostname = '20.25.197.116' #Public IP of VM: 20.25.197.116, #Private IP: 10.0.1.4
     port = 22
     username = 'testAdmin'
     passw = 'testPassword@1'
@@ -136,6 +136,9 @@ def process_la_result(json_result):
 
 @app.route('/query_log_analytics', methods=['POST'])
 def query_log_analytics():
+    logging.debug(f"Called /query_log_analytics API.")
+    logging.debug(f"Service tags Dict size {len(service_tags_map)}.")
+
     # Extract the authorization token from headers
     access_token = request.headers.get('Authorization')
 
