@@ -2,3 +2,4 @@ flask
 requests
 azure.identity
 tabulate
+paramiko
