@@ -4,6 +4,8 @@ from azure.identity import DefaultAzureCredential
 from tabulate import tabulate
 import ipaddress
 import threading
+import paramiko
+import json
 
 app = Flask(__name__)
 
@@ -45,15 +47,63 @@ def is_ip_in_prefix(ip_str, prefix_str):
     
     return ip in network
 
-def periodic_refresh_service_tags_cache():
+def periodic_refresh_service_tags_cache_nmagent_api():
     # Your task logic here
-    print("periodic_refresh_service_tags_cache")
-    refresh_service_tags_cache()
+    print("periodic_refresh_service_tags_cache_nmagent_api")
+    refresh_service_tags_cache_nmagent_api()
 
     # Schedule the next call
-    threading.Timer(60, periodic_refresh_service_tags_cache).start()  # Call every 60 seconds
+    threading.Timer(60, periodic_refresh_service_tags_cache_nmagent_api).start()  # Call every 60 seconds
 
-def refresh_service_tags_cache():
+def refresh_service_tags_cache_nmagent_api():
+# VM credentials
+    hostname = '20.228.36.129'
+    port = 22
+    username = 'testAdmin'
+    password = 'testPassword@1'
+
+    # Command to execute
+    command = 'curl "http://168.63.129.16/machine/plugins/?comp=nmagent&type=SystemTags/list"'
+
+    # Create an SSH client
+    client = paramiko.SSHClient()
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    client.connect(hostname, port, username, password)
+    # Execute the command
+    stdin, stdout, stderr = client.exec_command(command)
+    # Print the output
+    stdout_output = stdout.read().decode()
+    # Close the connection
+    client.close()
+
+    try:
+        # Parse the JSON string into a Python dictionary
+        service_tags_json = json.loads(stdout_output)
+    except json.JSONDecodeError as e:
+        # Handle the case where `stdout_output` is not valid JSON
+        print(f"Error decoding JSON: {e}")
+        # Optionally print the raw output for debugging
+        print("Raw output:", stdout_output)
+        return
+    
+    version = service_tags_json['version']
+    systemTags = service_tags_json['systemTags']
+
+    for systemTag in systemTags:
+        service_tags_map[systemTag['name']] = systemTag['ipV4']
+        service_tags_map[systemTag['name']].extend(systemTag['ipV6'])
+
+    print("Metering File Version: ", version, "Total in discovery:", len(systemTags), "Total in dict:", len(service_tags_map))
+
+def periodic_refresh_service_tags_cache_discovery_api():
+    # Your task logic here
+    print("periodic_refresh_service_tags_cache_discovery_api")
+    refresh_service_tags_cache_discovery_api()
+
+    # Schedule the next call
+    threading.Timer(60, periodic_refresh_service_tags_cache_discovery_api).start()  # Call every 60 seconds
+
+def refresh_service_tags_cache_discovery_api():
     service_tags = get_service_tags(uri_discovery)
     values = service_tags['value']
 
@@ -112,5 +162,5 @@ def query_log_analytics():
 
 # Main script
 if __name__ == "__main__":
-    threading.Timer(0, periodic_refresh_service_tags_cache).start()
+    threading.Timer(0, periodic_refresh_service_tags_cache_nmagent_api).start()
     app.run(debug=True)
