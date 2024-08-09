@@ -12,7 +12,6 @@ app = Flask(__name__)
 
 # Acquire the logger for a library (azure.mgmt.resource in this example)
 logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger()
 
 # Replace these values with your own
 workspace_id = "subscriptions/3846cb0f-4afa-47ee-8ea4-1c8449c8c8d9/resourcegroups/functionapptostorageflow/providers/microsoft.operationalinsights/workspaces/nsplog"
@@ -54,7 +53,7 @@ def is_ip_in_prefix(ip_str, prefix_str):
 
 def periodic_refresh_service_tags_cache_nmagent_api():
     # Your task logic here
-    logger.debug("periodic_refresh_service_tags_cache_nmagent_api")
+    logging.debug("periodic_refresh_service_tags_cache_nmagent_api")
     refresh_service_tags_cache_nmagent_api()
 
     # Schedule the next call
@@ -82,16 +81,16 @@ def refresh_service_tags_cache_nmagent_api():
         # Close the connection
         client.close()
     except Exception as e:
-        logger.error(f"Error executing command: {e}")
+        logging.error(f"Error executing command: {e}")
         return
     try:
         # Parse the JSON string into a Python dictionary
         service_tags_json = json.loads(stdout_output)
     except json.JSONDecodeError as e:
         # Handle the case where `stdout_output` is not valid JSON
-        logger.error(f"Error decoding JSON: {e}")
+        logging.error(f"Error decoding JSON: {e}")
         # Optionally print the raw output for debugging
-        logger.error(f"Raw output: {stdout_output}")
+        logging.error(f"Raw output: {stdout_output}")
         return
     
     version = service_tags_json['version']
@@ -101,11 +100,11 @@ def refresh_service_tags_cache_nmagent_api():
         service_tags_map[systemTag['name']] = systemTag['ipV4']
         service_tags_map[systemTag['name']].extend(systemTag['ipV6'])
 
-    logger.debug(f"Metering File Version: {version}. Total in discovery: {len(systemTags)}. Total in dict: {len(service_tags_map)}.")
+    logging.debug(f"Metering File Version: {version}. Total in discovery: {len(systemTags)}. Total in dict: {len(service_tags_map)}.")
 
 def periodic_refresh_service_tags_cache_discovery_api():
     # Your task logic here
-    logger.debug("periodic_refresh_service_tags_cache_discovery_api")
+    logging.debug("periodic_refresh_service_tags_cache_discovery_api")
     refresh_service_tags_cache_discovery_api()
 
     # Schedule the next call
@@ -117,7 +116,7 @@ def refresh_service_tags_cache_discovery_api():
 
     for value in values:
         service_tags_map[value['name']] = value['properties']['addressPrefixes']
-    logger.debug(f"Total in discovery: {len(values)}. Total in dict: {len(service_tags_map)}.")
+    logging.debug(f"Total in discovery: {len(values)}. Total in dict: {len(service_tags_map)}.")
 
 def process_la_result(json_result):    
     # Extract column names and rows from the JSON data
@@ -164,7 +163,7 @@ def query_log_analytics():
     if response.status_code == 200:
         suggestions = process_la_result(response.json())
         response = jsonify(suggestions)
-        logger.debug(f"Response : {response}")
+        logging.debug(f"Response : {response}")
     else:
         response = jsonify({'error': response.text}), response.status_code
     return response
@@ -172,17 +171,17 @@ def query_log_analytics():
 # Example function that triggers a log entry
 def example_function():
     print(
-        f"Logger enabled for ERROR={logger.isEnabledFor(logging.ERROR)},"
-        f"WARNING={logger.isEnabledFor(logging.WARNING)}, "
-        f"INFO={logger.isEnabledFor(logging.INFO)}, "
-        f"DEBUG={logger.isEnabledFor(logging.DEBUG)}")
-    logger.debug("debug: This is a debug message from the Azure SDK")
-    logger.info("info: This is a debug message from the Azure SDK")
-    logger.error("error: This is a debug message from the Azure SDK")
+        f"Logger enabled for ERROR={logging.isEnabledFor(logging.ERROR)},"
+        f"WARNING={logging.isEnabledFor(logging.WARNING)}, "
+        f"INFO={logging.isEnabledFor(logging.INFO)}, "
+        f"DEBUG={logging.isEnabledFor(logging.DEBUG)}")
+    logging.debug("debug: This is a debug message from the Azure SDK")
+    logging.info("info: This is a debug message from the Azure SDK")
+    logging.error("error: This is a debug message from the Azure SDK")
 
 # Main script
 if __name__ == "__main__":
     #threading.Timer(0, periodic_refresh_service_tags_cache_nmagent_api).start()
-    logger.debug("Call cache refresh.")
+    logging.debug("Call cache refresh.")
     refresh_service_tags_cache_nmagent_api()
     app.run(debug=True)
