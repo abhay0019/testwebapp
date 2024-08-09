@@ -57,10 +57,10 @@ def periodic_refresh_service_tags_cache_nmagent_api():
 
 def refresh_service_tags_cache_nmagent_api():
 # VM credentials
-    hostname = '20.228.36.129'
+    hostname = '10.0.1.4' #Public IP of VM: 20.228.36.129
     port = 22
     username = 'testAdmin'
-    password = 'testPassword@1'
+    passw = 'testPassword@1'
 
     # Command to execute
     command = 'curl "http://168.63.129.16/machine/plugins/?comp=nmagent&type=SystemTags/list"'
@@ -68,7 +68,7 @@ def refresh_service_tags_cache_nmagent_api():
     # Create an SSH client
     client = paramiko.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    client.connect(hostname, port, username, password)
+    client.connect(hostname, port, username, passw)
     # Execute the command
     stdin, stdout, stderr = client.exec_command(command)
     # Print the output
