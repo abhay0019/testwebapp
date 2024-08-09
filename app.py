@@ -60,8 +60,9 @@ def periodic_refresh_service_tags_cache_nmagent_api():
     threading.Timer(60, periodic_refresh_service_tags_cache_nmagent_api).start()  # Call every 60 seconds
 
 def refresh_service_tags_cache_nmagent_api():
+    logging.debug("refresh_service_tags_cache_nmagent_api")
 # VM credentials
-    hostname = '20.25.197.116' #Public IP of VM: 20.25.197.116, #Private IP: 10.0.1.4
+    hostname = '10.0.1.4' #Public IP of VM: 20.25.197.116, #Private IP: 10.0.1.4
     port = 22
     username = 'testAdmin'
     passw = 'testPassword@1'
@@ -70,12 +71,17 @@ def refresh_service_tags_cache_nmagent_api():
     command = 'curl "http://168.63.129.16/machine/plugins/?comp=nmagent&type=SystemTags/list"'
 
     try:
+        logging.debug("Create SSH Client")
         # Create an SSH client
         client = paramiko.SSHClient()
+        logging.debug("Set Policy")
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        logging.debug("Connect to VM via Webapp")
         client.connect(hostname, port, username, passw)
+        logging.debug("Connection done, send command to execute.")
         # Execute the command
         stdin, stdout, stderr = client.exec_command(command)
+        logging.debug(f"Command sent and received error {stderr.read().decode()}.")
         # Print the output
         stdout_output = stdout.read().decode()
         # Close the connection
@@ -138,6 +144,11 @@ def process_la_result(json_result):
 def query_log_analytics():
     logging.debug(f"Called /query_log_analytics API.")
     logging.debug(f"Service tags Dict size {len(service_tags_map)}.")
+    if len(service_tags_map)==0:
+        logging.debug(f"Calling refreshhhh.")
+        refresh_service_tags_cache_nmagent_api()
+        logging.debug(f"Refresh doneeee.")
+
 
     # Extract the authorization token from headers
     access_token = request.headers.get('Authorization')
