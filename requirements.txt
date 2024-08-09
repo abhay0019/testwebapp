@@ -3,3 +3,4 @@ requests
 azure.identity
 tabulate
 paramiko
+pytricia
