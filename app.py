@@ -70,25 +70,28 @@ def refresh_service_tags_cache_nmagent_api():
     # Command to execute
     command = 'curl "http://168.63.129.16/machine/plugins/?comp=nmagent&type=SystemTags/list"'
 
-    # Create an SSH client
-    client = paramiko.SSHClient()
-    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    client.connect(hostname, port, username, passw)
-    # Execute the command
-    stdin, stdout, stderr = client.exec_command(command)
-    # Print the output
-    stdout_output = stdout.read().decode()
-    # Close the connection
-    client.close()
-
+    try:
+        # Create an SSH client
+        client = paramiko.SSHClient()
+        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        client.connect(hostname, port, username, passw)
+        # Execute the command
+        stdin, stdout, stderr = client.exec_command(command)
+        # Print the output
+        stdout_output = stdout.read().decode()
+        # Close the connection
+        client.close()
+    except Exception as e:
+        logger.error(f"Error executing command: {e}")
+        return
     try:
         # Parse the JSON string into a Python dictionary
         service_tags_json = json.loads(stdout_output)
     except json.JSONDecodeError as e:
         # Handle the case where `stdout_output` is not valid JSON
-        logger.debug(f"Error decoding JSON: {e}")
+        logger.error(f"Error decoding JSON: {e}")
         # Optionally print the raw output for debugging
-        logger.debug(f"Raw output: {stdout_output}")
+        logger.error(f"Raw output: {stdout_output}")
         return
     
     version = service_tags_json['version']
