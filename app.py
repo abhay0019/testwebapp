@@ -195,7 +195,6 @@ def example_function():
 
 # Main script
 if __name__ == "__main__":
-    #threading.Timer(0, periodic_refresh_service_tags_cache_nmagent_api).start()
     logging.debug("Call cache refresh.")
-    refresh_service_tags_cache_nmagent_api()
+    threading.Timer(0, periodic_refresh_service_tags_cache_nmagent_api).start()
     app.run(debug=True)
