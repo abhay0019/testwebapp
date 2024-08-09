@@ -163,10 +163,11 @@ def query_log_analytics():
 
     if response.status_code == 200:
         suggestions = process_la_result(response.json())
-        logger.debug(suggestions)
-        return jsonify(suggestions)
+        response = jsonify(suggestions)
+        logger.debug(f"Response : {response}")
     else:
-        return jsonify({'error': response.text}), response.status_code
+        response = jsonify({'error': response.text}), response.status_code
+    return response
 
 # Example function that triggers a log entry
 def example_function():
@@ -181,5 +182,7 @@ def example_function():
 
 # Main script
 if __name__ == "__main__":
-    threading.Timer(0, periodic_refresh_service_tags_cache_nmagent_api).start()
+    #threading.Timer(0, periodic_refresh_service_tags_cache_nmagent_api).start()
+    logger.debug("Call cache refresh.")
+    refresh_service_tags_cache_nmagent_api()
     app.run(debug=True)
