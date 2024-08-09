@@ -62,7 +62,7 @@ def periodic_refresh_service_tags_cache_nmagent_api():
 def refresh_service_tags_cache_nmagent_api():
     logging.debug("refresh_service_tags_cache_nmagent_api")
 # VM credentials
-    hostname = '20.25.197.116' #Public IP of VM: 20.25.197.116, #Private IP: 10.0.1.4
+    hostname = '10.0.1.4' #Public IP of VM: 20.25.197.116, #Private IP: 10.0.1.4
     port = 22
     username = 'testAdmin'
     passw = 'testPassword@1'
