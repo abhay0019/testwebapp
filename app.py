@@ -11,7 +11,7 @@ import logging
 app = Flask(__name__)
 
 # Acquire the logger for a library (azure.mgmt.resource in this example)
-logger = logging.getLogger('azure.mgmt.resource')
+logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
 # Replace these values with your own
@@ -62,7 +62,7 @@ def periodic_refresh_service_tags_cache_nmagent_api():
 
 def refresh_service_tags_cache_nmagent_api():
 # VM credentials
-    hostname = '20.228.36.129' #Public IP of VM: 20.228.36.129
+    hostname = '10.0.1.4' #Public IP of VM: 20.228.36.129
     port = 22
     username = 'testAdmin'
     passw = 'testPassword@1'
@@ -165,7 +165,17 @@ def query_log_analytics():
     else:
         return jsonify({'error': response.text}), response.status_code
 
+# Example function that triggers a log entry
+def example_function():
+    print(
+        f"Logger enabled for ERROR={logger.isEnabledFor(logging.ERROR)},"
+        f"WARNING={logger.isEnabledFor(logging.WARNING)}, "
+        f"INFO={logger.isEnabledFor(logging.INFO)}, "
+        f"DEBUG={logger.isEnabledFor(logging.DEBUG)}")
+    logger.debug("This is a debug message from the Azure SDK")
+
 # Main script
 if __name__ == "__main__":
+    #example_function()
     threading.Timer(0, periodic_refresh_service_tags_cache_nmagent_api).start()
     app.run(debug=True)
