@@ -11,6 +11,7 @@ import logging
 app = Flask(__name__)
 
 # Acquire the logger for a library (azure.mgmt.resource in this example)
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
@@ -172,10 +173,11 @@ def example_function():
         f"WARNING={logger.isEnabledFor(logging.WARNING)}, "
         f"INFO={logger.isEnabledFor(logging.INFO)}, "
         f"DEBUG={logger.isEnabledFor(logging.DEBUG)}")
-    logger.debug("This is a debug message from the Azure SDK")
+    logger.debug("debug: This is a debug message from the Azure SDK")
+    logger.info("info: This is a debug message from the Azure SDK")
+    logger.error("error: This is a debug message from the Azure SDK")
 
 # Main script
 if __name__ == "__main__":
-    #example_function()
     threading.Timer(0, periodic_refresh_service_tags_cache_nmagent_api).start()
     app.run(debug=True)
