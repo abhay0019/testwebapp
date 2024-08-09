@@ -7,6 +7,7 @@ import threading
 import paramiko
 import json
 import logging
+import pytricia
 
 app = Flask(__name__)
 
@@ -16,7 +17,10 @@ logging.basicConfig(level=logging.DEBUG)
 # Replace these values with your own
 workspace_id = "subscriptions/3846cb0f-4afa-47ee-8ea4-1c8449c8c8d9/resourcegroups/functionapptostorageflow/providers/microsoft.operationalinsights/workspaces/nsplog"
 uri_discovery = "https://management.azure.com/subscriptions/3846cb0f-4afa-47ee-8ea4-1c8449c8c8d9/providers/Microsoft.Network/locations/ukwest/serviceTagDetails?api-version=2021-03-01"
+
 service_tags_map = {}
+## Populate prefixes in PyTricia for fast matching.
+prefixToTagsTrieCache = pytricia.PyTricia()
 
 def get_service_tags(uri_discovery):
     credential = DefaultAzureCredential()
@@ -33,6 +37,20 @@ def get_access_token():
     credential = DefaultAzureCredential()
     token = credential.get_token("https://api.loganalytics.io/.default")
     return token.token
+
+def is_valid_ip(ip_str):
+    try:
+        ip = ipaddress.ip_address(ip_str)
+    except:
+        return False
+    return True
+
+def find_matching_tag_via_trie(ip_str):
+    """Find the matching tag for a given IP address."""
+    if is_valid_ip(ip_str) and prefixToTagsTrieCache.get(ip_str) is not None:
+        matched_tags = prefixToTagsTrieCache[ip_str] 
+        return matched_tags
+    return None
 
 def find_matching_tag(ip_str, service_tags_map):
     """Find the matching tag for a given IP address."""
@@ -62,7 +80,7 @@ def periodic_refresh_service_tags_cache_nmagent_api():
 def refresh_service_tags_cache_nmagent_api():
     logging.debug("refresh_service_tags_cache_nmagent_api")
 # VM credentials
-    hostname = '10.0.1.4' #Public IP of VM: 20.25.197.116, #Private IP: 10.0.1.4
+    hostname = '20.25.197.116' #Public IP of VM: 20.25.197.116, #Private IP: 10.0.1.4
     port = 22
     username = 'testAdmin'
     passw = 'testPassword@1'
@@ -107,6 +125,17 @@ def refresh_service_tags_cache_nmagent_api():
         service_tags_map[systemTag['name']].extend(systemTag['ipV6'])
 
     logging.debug(f"Metering File Version: {version}. Total in discovery: {len(systemTags)}. Total in dict: {len(service_tags_map)}.")
+    populate_in_trie(service_tags_map)
+
+def populate_in_trie(tags_to_prefix_mapping):
+    # Invert the dictionary to use prefixes as keys
+    for tag, prefixes in tags_to_prefix_mapping.items():
+        for prefix in prefixes:
+            if prefix in prefixToTagsTrieCache:
+                prefixToTagsTrieCache[prefix].append(tag)
+            else:
+                prefixToTagsTrieCache[prefix] = [tag]
+    print("Total Entries in TRIE :", len(prefixToTagsTrieCache))
 
 def periodic_refresh_service_tags_cache_discovery_api():
     # Your task logic here
@@ -136,8 +165,12 @@ def process_la_result(json_result):
     for row in rows:
         category = row[column_names.index('Category')]
         source_ip = row[column_names.index('SourceIpAddress')]
-        matched_tag = find_matching_tag(source_ip, service_tags_map)
-        suggestions.append(f"Source IP: {source_ip}, Category: {category}, Matched Tag: {matched_tag}")
+        matched_tags = find_matching_tag_via_trie(source_ip)
+        suggestion = {}
+        suggestion["SourceIP"] = source_ip
+        suggestion["Category"] = category
+        suggestion["MatchedTags"] = matched_tags
+        suggestions.append(suggestion)
     return suggestions
 
 @app.route('/query_log_analytics', methods=['POST'])
@@ -161,8 +194,7 @@ def query_log_analytics():
     # Prepare the query payload
     query = """NSPAccessLogs
                     | project TimeGenerated, Category, MatchedRule, SourceIpAddress
-                    | distinct Category, SourceIpAddress
-                    | limit 10"""
+                    | distinct Category, SourceIpAddress"""
     headers = {
         'Authorization': f'Bearer {access_token}',
         'Content-Type': 'application/json'
@@ -176,7 +208,8 @@ def query_log_analytics():
 
     if response.status_code == 200:
         suggestions = process_la_result(response.json())
-        response = jsonify(suggestions)
+        response = {}
+        response["values"] = suggestions
         logging.debug(f"Response : {response}")
     else:
         response = jsonify({'error': response.text}), response.status_code
@@ -196,5 +229,6 @@ def example_function():
 # Main script
 if __name__ == "__main__":
     logging.debug("Call cache refresh.")
+    #refresh_service_tags_cache_nmagent_api()
     threading.Timer(0, periodic_refresh_service_tags_cache_nmagent_api).start()
     app.run(debug=True)
