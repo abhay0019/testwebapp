@@ -22,11 +22,9 @@ service_tags_map = {}
 ## Populate prefixes in PyTricia for fast matching.
 prefixToTagsTrieCache = pytricia.PyTricia()
 
-def get_service_tags(uri_discovery):
-    credential = DefaultAzureCredential()
-    token = credential.get_token("https://management.azure.com/.default")
+def get_service_tags(uri_discovery, token):
     headers = {
-        'Authorization': f'Bearer {token.token}'
+        'Authorization': f'Bearer {token}'
     }
     response = requests.get(uri_discovery, headers=headers)
     response.raise_for_status()
@@ -45,12 +43,25 @@ def is_valid_ip(ip_str):
         return False
     return True
 
+# Function to get the longest prefix match
+def get_prefix_match(trie, prefix):
+    try:
+        matched_prefix = trie.get_key(prefix)
+        print(f"Prefix: {prefix}")
+        if matched_prefix is None:
+            return None, None
+        return trie[matched_prefix], matched_prefix
+    except KeyError:
+        return None, None
+    
 def find_matching_tag_via_trie(ip_str):
     """Find the matching tag for a given IP address."""
-    if is_valid_ip(ip_str) and prefixToTagsTrieCache.get(ip_str) is not None:
-        matched_tags = prefixToTagsTrieCache[ip_str] 
-        return matched_tags
-    return None
+    if is_valid_ip(ip_str):
+        matched_tags, matched_prefix = get_prefix_match(prefixToTagsTrieCache, ip_str)
+        if matched_tags is None:
+            return [], '' 
+        return matched_tags, matched_prefix
+    return [], ''
 
 def find_matching_tag(ip_str, service_tags_map):
     """Find the matching tag for a given IP address."""
@@ -77,9 +88,9 @@ def periodic_refresh_service_tags_cache_nmagent_api():
     # Schedule the next call
     threading.Timer(60, periodic_refresh_service_tags_cache_nmagent_api).start()  # Call every 60 seconds
 
-def refresh_service_tags_cache_nmagent_api():
-    logging.debug("refresh_service_tags_cache_nmagent_api")
-# VM credentials
+def get_service_tags_from_vm():
+    logging.debug("get_service_tags_from_vm")
+    # VM credentials
     hostname = '10.0.1.4' #Public IP of VM: 20.25.197.116, #Private IP: 10.0.1.4
     port = 22
     username = 'testAdmin'
@@ -106,7 +117,7 @@ def refresh_service_tags_cache_nmagent_api():
         client.close()
     except Exception as e:
         logging.error(f"Error executing command: {e}")
-        return
+        return False, e
     try:
         # Parse the JSON string into a Python dictionary
         service_tags_json = json.loads(stdout_output)
@@ -115,8 +126,17 @@ def refresh_service_tags_cache_nmagent_api():
         logging.error(f"Error decoding JSON: {e}")
         # Optionally print the raw output for debugging
         logging.error(f"Raw output: {stdout_output}")
-        return
+        return False, e
+
+    return True, service_tags_json
+
+def refresh_service_tags_cache_nmagent_api():
+    logging.debug("refresh_service_tags_cache_nmagent_api")
+    status, data = get_service_tags_from_vm()
+    if status == False:
+        return status, data
     
+    service_tags_json = data
     version = service_tags_json['version']
     systemTags = service_tags_json['systemTags']
 
@@ -126,15 +146,16 @@ def refresh_service_tags_cache_nmagent_api():
 
     logging.debug(f"Metering File Version: {version}. Total in discovery: {len(systemTags)}. Total in dict: {len(service_tags_map)}.")
     populate_in_trie(service_tags_map)
+    return True, version, len(service_tags_map)
 
 def populate_in_trie(tags_to_prefix_mapping):
     # Invert the dictionary to use prefixes as keys
     for tag, prefixes in tags_to_prefix_mapping.items():
         for prefix in prefixes:
-            if prefix in prefixToTagsTrieCache:
+            if prefixToTagsTrieCache.has_key(prefix):
                 prefixToTagsTrieCache[prefix].append(tag)
             else:
-                prefixToTagsTrieCache[prefix] = [tag]
+                prefixToTagsTrieCache.insert(prefix, [tag])
     print("Total Entries in TRIE :", len(prefixToTagsTrieCache))
 
 def periodic_refresh_service_tags_cache_discovery_api():
@@ -146,14 +167,18 @@ def periodic_refresh_service_tags_cache_discovery_api():
     threading.Timer(60, periodic_refresh_service_tags_cache_discovery_api).start()  # Call every 60 seconds
 
 def refresh_service_tags_cache_discovery_api():
-    service_tags = get_service_tags(uri_discovery)
+    credential = DefaultAzureCredential()
+    token = credential.get_token("https://management.azure.com/.default")
+    service_tags = get_service_tags(uri_discovery, token.token)
     values = service_tags['value']
 
     for value in values:
         service_tags_map[value['name']] = value['properties']['addressPrefixes']
     logging.debug(f"Total in discovery: {len(values)}. Total in dict: {len(service_tags_map)}.")
 
-def process_la_result(json_result):    
+def process_la_result(json_result):
+    logging.debug(f"process_la_result.")
+
     # Extract column names and rows from the JSON data
     columns = json_result['tables'][0]['columns']
     column_names = [column['name'] for column in columns]
@@ -165,13 +190,59 @@ def process_la_result(json_result):
     for row in rows:
         category = row[column_names.index('Category')]
         source_ip = row[column_names.index('SourceIpAddress')]
-        matched_tags = find_matching_tag_via_trie(source_ip)
+        matched_tags, prefix = find_matching_tag_via_trie(source_ip)
         suggestion = {}
         suggestion["SourceIP"] = source_ip
         suggestion["Category"] = category
-        suggestion["MatchedTags"] = matched_tags
+        suggestion["MatchedTags"] = list(set(matched_tags))
+        suggestion["MatchedPrefix"] = prefix
         suggestions.append(suggestion)
+    
+    logging.debug(f"suggestion {len(suggestions)}.")
     return suggestions
+
+@app.route('/refresh_service_tags_cache', methods=['POST'])
+def refresh_service_tag_cache():
+    logging.debug(f"Called /refresh_service_tags_cache API.")
+    status, message1, message2 = refresh_service_tags_cache_nmagent_api()
+    if status == True:
+        resp = {}
+        resp['message'] = 'Service tags cache refreshed successfully'
+        resp['Version'] = message1
+        resp['TotalTags'] = message2
+        return jsonify(resp)
+    else:
+        return jsonify({'message': message1}), 500
+
+
+@app.route('/get_service_tags_cache', methods=['POST'])
+def get_service_tags_cache():
+    logging.debug(f"Called /get_service_tags_cache API.")
+    return jsonify(service_tags_map)
+
+@app.route('/get_nmagent_v2_data', methods=['POST'])
+def get_nmagent_v2_data():
+    logging.debug(f"Called /get_nmagent_v2_data API.")
+    status, message1 = get_service_tags_from_vm()
+    if (status == False):
+        return jsonify({'message': message1}), 500
+    return jsonify(message1)
+
+@app.route('/get_discovery_api_data', methods=['POST'])
+def get_discovery_api_data():
+    logging.debug(f"Called /get_discovery_api_data API.")
+    
+    # Extract the authorization token from headers
+    access_token = request.headers.get('Authorization')
+
+    if not access_token or not access_token.startswith('Bearer '):
+        logging.debug(f"No Auth token providing trying generating with env variables.")
+        credential = DefaultAzureCredential()
+        access_token = credential.get_token("https://management.azure.com/.default")
+    else:
+        logging.debug(f"Re-using auth token in header.")
+        access_token = access_token[len('Bearer '):]  # Remove 'Bearer ' prefix
+    return get_service_tags(uri_discovery, access_token)
 
 @app.route('/query_log_analytics', methods=['POST'])
 def query_log_analytics():
