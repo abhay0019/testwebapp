@@ -220,7 +220,7 @@ def get_service_tags_cache():
     logging.debug(f"Called /get_service_tags_cache API.")
     return jsonify(service_tags_map)
 
-@app.route('/get_nmagent_v2_data', methods=['POST'])
+@app.route('/get_nmagent_v2_data', methods=['GET'])
 def get_nmagent_v2_data():
     logging.debug(f"Called /get_nmagent_v2_data API.")
     status, message1 = get_service_tags_from_vm()
