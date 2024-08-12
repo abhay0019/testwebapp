@@ -201,7 +201,7 @@ def process_la_result(json_result):
     logging.debug(f"suggestion {len(suggestions)}.")
     return suggestions
 
-@app.route('/refresh_service_tags_cache', methods=['POST'])
+@app.route('/refresh_service_tags_cache', methods=['GET'])
 def refresh_service_tag_cache():
     logging.debug(f"Called /refresh_service_tags_cache API.")
     status, message1, message2 = refresh_service_tags_cache_nmagent_api()
@@ -215,7 +215,7 @@ def refresh_service_tag_cache():
         return jsonify({'message': message1}), 500
 
 
-@app.route('/get_service_tags_cache', methods=['POST'])
+@app.route('/get_service_tags_cache', methods=['GET'])
 def get_service_tags_cache():
     logging.debug(f"Called /get_service_tags_cache API.")
     return jsonify(service_tags_map)
@@ -228,7 +228,7 @@ def get_nmagent_v2_data():
         return jsonify({'message': message1}), 500
     return jsonify(message1)
 
-@app.route('/get_discovery_api_data', methods=['POST'])
+@app.route('/get_discovery_api_data', methods=['GET'])
 def get_discovery_api_data():
     logging.debug(f"Called /get_discovery_api_data API.")
     
