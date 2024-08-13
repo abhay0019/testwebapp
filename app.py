@@ -91,7 +91,7 @@ def periodic_refresh_service_tags_cache_nmagent_api():
 def get_service_tags_from_vm():
     logging.debug("get_service_tags_from_vm")
     # VM credentials
-    hostname = '10.0.1.4' #Public IP of VM: 20.25.197.116, #Private IP: 10.0.1.4
+    hostname = '20.25.197.116' #Public IP of VM: 20.25.197.116, #Private IP: 10.0.1.4
     port = 22
     username = 'testAdmin'
     passw = 'testPassword@1'
@@ -201,7 +201,7 @@ def process_la_result(json_result):
     logging.debug(f"suggestion {len(suggestions)}.")
     return suggestions
 
-@app.route('/refresh_service_tags_cache', methods=['GET'])
+@app.route('/api/refresh_service_tags_cache', methods=['GET'])
 def refresh_service_tag_cache():
     logging.debug(f"Called /refresh_service_tags_cache API.")
     status, message1, message2 = refresh_service_tags_cache_nmagent_api()
@@ -215,7 +215,7 @@ def refresh_service_tag_cache():
         return jsonify({'message': message1}), 500
 
 
-@app.route('/get_service_tags_cache', methods=['GET'])
+@app.route('/api/get_service_tags_cache', methods=['GET'])
 def get_service_tags_cache():
     logging.debug(f"Called /get_service_tags_cache API.")
     return jsonify(service_tags_map)
@@ -228,7 +228,7 @@ def get_nmagent_v2_data():
         return jsonify({'message': message1}), 500
     return jsonify(message1)
 
-@app.route('/get_discovery_api_data', methods=['GET'])
+@app.route('/api/get_discovery_api_data', methods=['GET'])
 def get_discovery_api_data():
     logging.debug(f"Called /get_discovery_api_data API.")
     
@@ -244,7 +244,7 @@ def get_discovery_api_data():
         access_token = access_token[len('Bearer '):]  # Remove 'Bearer ' prefix
     return get_service_tags(uri_discovery, access_token)
 
-@app.route('/query_log_analytics', methods=['POST'])
+@app.route('/api/query_log_analytics', methods=['POST'])
 def query_log_analytics():
     logging.debug(f"Called /query_log_analytics API.")
     logging.debug(f"Service tags Dict size {len(service_tags_map)}.")
