@@ -91,7 +91,7 @@ def periodic_refresh_service_tags_cache_nmagent_api():
 def get_service_tags_from_vm():
     logging.debug("get_service_tags_from_vm")
     # VM credentials
-    hostname = '20.25.197.116' #Public IP of VM: 20.25.197.116, #Private IP: 10.0.1.4
+    hostname = '10.0.1.4' #Public IP of VM: 20.25.197.116, #Private IP: 10.0.1.4
     port = 22
     username = 'testAdmin'
     passw = 'testPassword@1'
@@ -220,7 +220,7 @@ def get_service_tags_cache():
     logging.debug(f"Called /get_service_tags_cache API.")
     return jsonify(service_tags_map)
 
-@app.route('/get_nmagent_v2_data', methods=['GET'])
+@app.route('/api/get_nmagent_v2_data', methods=['GET'])
 def get_nmagent_v2_data():
     logging.debug(f"Called /get_nmagent_v2_data API.")
     status, message1 = get_service_tags_from_vm()
