@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 import requests
 from azure.identity import DefaultAzureCredential
 from tabulate import tabulate
@@ -10,6 +11,7 @@ import logging
 import pytricia
 
 app = Flask(__name__)
+CORS(app)  # Enable CORS for all routes and origins
 
 # Acquire the logger for a library (azure.mgmt.resource in this example)
 logging.basicConfig(level=logging.DEBUG)
