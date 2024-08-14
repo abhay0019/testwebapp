@@ -203,6 +203,11 @@ def process_la_result(json_result):
     logging.debug(f"suggestion {len(suggestions)}.")
     return suggestions
 
+@app.route('/test', methods=['GET'])
+def test_hi():
+    logging.debug(f"Called /test API.")
+    return jsonify({'message': 'hi, i am up'}), 200
+    
 @app.route('/refresh_service_tags_cache', methods=['GET'])
 def refresh_service_tag_cache():
     logging.debug(f"Called /refresh_service_tags_cache API.")
